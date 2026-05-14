@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hearts Scorekeeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Crimson+Pro:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --felt-deep:   #14342b;
+    --felt:        #1c4a3c;
+    --felt-light:  #266150;
+    --cream:       #f4 ecd8;
+    --cream-solid: #f4ecd8;
+    --parchment:   #fbf6e9;
+    --ink:         #1a1410;
+    --ink-soft:    #4a4038;
+    --heart-red:   #b3122b;
+    --heart-bright:#d62246;
+    --gold:        #c9a24a;
+    --gold-bright: #e6c068;
+    --line:        rgba(26, 20, 16, 0.14);
+    --shadow:      rgba(0, 0, 0, 0.28);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 20% 0%, var(--felt-light) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, var(--felt-light) 0%, transparent 50%),
+      var(--felt-deep);
+    background-attachment: fixed;
+    min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+    padding: 0 0 64px;
+  }
+
+  /* faint card-suit texture on the table */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image:
+      radial-gradient(circle at 12px 12px, var(--cream-solid) 1.4px, transparent 1.5px);
+    background-size: 46px 46px;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    text-align: center;
+    padding: 44px 0 26px;
+  }
+  .crest {
+    font-size: 30px;
+    letter-spacing: 6px;
+    color: var(--heart-bright);
+    margin-bottom: 6px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: clamp(38px, 7vw, 60px);
+    color: var(--cream);
+    line-height: 1;
+    letter-spacing: 0.5px;
+  }
+  h1 .amp { color: var(--gold-bright); font-style: italic; }
+  .tagline {
+    font-style: italic;
+    color: var(--gold);
+    font-size: 17px;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ---------- status bar ---------- */
+  .statusbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 22px;
+  }
+  .role-toggle {
+    display: inline-flex;
+    border: 1.5px solid var(--gold);
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.25);
+  }
+  .role-toggle button {
+    font-family: 'Crimson Pro', serif;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: none;
+    background: transparent;
+    color: var(--gold-bright);
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+  }
+  .role-toggle button.active {
+    background: var(--gold);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .pill {
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    color: var(--cream);
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(244,236,216,0.25);
+    border-radius: 999px;
+    padding: 7px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold-bright);
+  }
+  .dot.live { background: #54d98c; box-shadow: 0 0 8px #54d98c; animation: pulse 2s infinite; }
+  .dot.err  { background: var(--heart-bright); box-shadow: 0 0 8px var(--heart-bright); }
+  .dot.idle { background: #8a8a8a; box-shadow: none; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  .refresh-btn {
+    font-family: 'Crimson Pro', serif;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    color: var(--cream);
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(244,236,216,0.25);
+    border-radius: 999px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .refresh-btn:hover { background: rgba(0,0,0,0.5); }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--parchment);
+    border-radius: 4px;
+    margin-top: 24px;
+    padding: 28px 30px;
+    box-shadow: 0 18px 40px -12px var(--shadow), 0 0 0 1px rgba(0,0,0,0.05);
+    position: relative;
+  }
+  .panel::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .panel-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .panel-title .suit { color: var(--heart-red); font-size: 20px; }
+  .panel-sub {
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+
+  /* ---------- forms ---------- */
+  label.field {
+    display: block;
+    margin-bottom: 16px;
+  }
+  label.field span {
+    display: block;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  input[type="text"], input[type="number"] {
+    font-family: 'Crimson Pro', serif;
+    font-size: 17px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
+  input:disabled { background: #ece5d3; color: var(--ink-soft); }
+
+  .mode-row { display: flex; gap: 10px; margin-bottom: 18px; }
+  .mode-row button {
+    flex: 1;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 19px;
+    padding: 14px 8px;
+    border: 1.5px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mode-row button.active {
+    background: var(--ink);
+    color: var(--parchment);
+  }
+  .mode-row button .sub {
+    display: block;
+    font-family: 'Crimson Pro', serif;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  .name-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 18px;
+  }
+  @media (max-width: 560px) { .name-grid { grid-template-columns: 1fr; } }
+
+  .team-label {
+    grid-column: 1 / -1;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    color: var(--heart-red);
+    margin-top: 6px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+  }
+
+  .btn {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+    padding: 12px 26px;
+    border-radius: 3px;
+    border: 1.5px solid var(--heart-red);
+    background: var(--heart-red);
+    color: var(--parchment);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+    box-shadow: 0 4px 0 #7d0c1e;
+  }
+  .btn:hover { background: var(--heart-bright); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #7d0c1e; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink);
+    box-shadow: 0 4px 0 rgba(26,20,16,0.3);
+  }
+  .btn.ghost:hover { background: rgba(26,20,16,0.07); }
+  .btn.ghost:active { box-shadow: 0 1px 0 rgba(26,20,16,0.3); }
+  .btn.small { font-size: 15px; padding: 7px 14px; box-shadow: 0 3px 0 rgba(26,20,16,0.3); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+
+  /* ---------- scoreboard ---------- */
+  .scoreboard {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .player-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--gold);
+    border-radius: 3px;
+    padding: 14px 18px;
+    transition: border-color 0.2s;
+  }
+  .player-card.leader { border-left-color: #2e8b57; }
+  .player-card.danger { border-left-color: var(--heart-red); }
+  .player-card .who {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .player-card .who small {
+    display: block;
+    font-family: 'Crimson Pro', serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+  .player-card .score {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .player-card .score small { font-size: 14px; color: var(--ink-soft); }
+
+  .team-block {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 6px 0;
+  }
+  .team-block .team-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 18px 6px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .team-block .team-head .tname {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--heart-red);
+  }
+  .team-block .team-head .ttotal {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 34px;
+    font-weight: 700;
+  }
+  .team-block.leader { border-left: 5px solid #2e8b57; }
+  .team-block.danger { border-left: 5px solid var(--heart-red); }
+  .team-member {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 18px;
+    font-size: 16px;
+    color: var(--ink-soft);
+  }
+  .team-member .mscore { font-weight: 600; color: var(--ink); }
+
+  /* ---------- round entry ---------- */
+  .round-entry {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .entry-grid {
+    display: grid;
+    gap: 10px 16px;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 560px) { .entry-grid { grid-template-columns: 1fr; } }
+  .entry-grid label.field { margin-bottom: 4px; }
+  .entry-sum {
+    grid-column: 1 / -1;
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 15px;
+    text-align: right;
+  }
+  .entry-sum.bad { color: var(--heart-red); font-style: normal; font-weight: 600; }
+  .entry-sum.good { color: #2e8b57; }
+
+  .moon-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px dashed var(--gold);
+    border-radius: 3px;
+    padding: 10px 14px;
+    margin: 4px 0;
+  }
+  .moon-row label {
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .moon-row select {
+    font-family: 'Crimson Pro', serif;
+    font-size: 15px;
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+  }
+
+  /* ---------- history ---------- */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    margin-top: 4px;
+  }
+  .history-table th, .history-table td {
+    padding: 7px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .history-table th {
+    font-family: 'Crimson Pro', serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .history-table td:first-child, .history-table th:first-child {
+    text-align: left;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .history-table tr.moon td { color: var(--heart-red); }
+  .history-table .tot-row td {
+    font-weight: 700;
+    border-top: 2px solid var(--ink);
+    border-bottom: none;
+    font-size: 17px;
+  }
+
+  /* ---------- winner banner ---------- */
+  .winner-banner {
+    background: var(--ink);
+    color: var(--gold-bright);
+    border-radius: 4px;
+    text-align: center;
+    padding: 22px;
+    margin-top: 24px;
+    box-shadow: 0 18px 40px -12px var(--shadow);
+  }
+  .winner-banner .crown { font-size: 30px; }
+  .winner-banner h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--cream);
+    margin: 4px 0;
+  }
+  .winner-banner p { font-style: italic; color: var(--gold); }
+
+  /* ---------- misc ---------- */
+  .empty-note {
+    text-align: center;
+    font-style: italic;
+    color: var(--cream);
+    opacity: 0.7;
+    padding: 30px 0;
+  }
+  .viewer-lock {
+    background: rgba(26,20,16,0.06);
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+    padding: 14px;
+    font-style: italic;
+    color: var(--ink-soft);
+    text-align: center;
+    font-size: 15px;
+  }
+  .config-warn {
+    background: var(--heart-red);
+    color: var(--parchment);
+    padding: 14px 18px;
+    border-radius: 4px;
+    margin-top: 24px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .config-warn code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  footer {
+    text-align: center;
+    color: var(--cream);
+    opacity: 0.5;
+    font-size: 13px;
+    font-style: italic;
+    margin-top: 40px;
+  }
+  /* ---------- tab nav ---------- */
+  .tabnav {
+    display: flex;
+    gap: 6px;
+    margin-top: 26px;
+    justify-content: center;
+  }
+  .tabnav button {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 21px;
+    letter-spacing: 0.5px;
+    padding: 10px 28px;
+    border: none;
+    background: rgba(0,0,0,0.28);
+    color: var(--cream);
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    border-bottom: 3px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .tabnav button:hover { background: rgba(0,0,0,0.42); }
+  .tabnav button.active {
+    background: var(--parchment);
+    color: var(--ink);
+    border-bottom-color: var(--heart-red);
+  }
+
+  /* ---------- subtabs ---------- */
+  .subtab-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .subtab-row button {
+    font-family: 'Crimson Pro', serif;
+    font-size: 15px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .subtab-row button.active {
+    color: var(--heart-red);
+    border-bottom-color: var(--heart-red);
+    font-weight: 600;
+  }
+
+  /* ---------- records tables ---------- */
+  .record-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .record-table th, .record-table td {
+    padding: 9px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .record-table th {
+    font-family: 'Crimson Pro', serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+  .record-table td:first-child, .record-table th:first-child {
+    text-align: left;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .record-table .w { color: #2e8b57; font-weight: 700; }
+  .record-table .l { color: var(--heart-red); font-weight: 700; }
+  .record-table tr:hover td { background: rgba(201,162,74,0.08); }
+
+  .winner-actions { margin-top: 16px; }
+  .saved-note {
+    display: inline-block;
+    color: #54d98c;
+    font-style: italic;
+    font-size: 15px;
+    margin-left: 8px;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crest">&#9829; &#9824; &#9827; &#9830;</div>
+    <h1>Hearts <span class="amp">&amp;</span> Tallies</h1>
+    <div class="tagline">a scorekeeper for the prettiest cruel little card game</div>
+
+    <div class="statusbar">
+      <div class="role-toggle" id="roleToggle">
+        <button data-role="scorekeeper">Scorekeeper</button>
+        <button data-role="viewer">Viewer</button>
+      </div>
+      <span class="pill"><span class="dot idle" id="syncDot"></span><span id="syncText">Not connected</span></span>
+      <button class="refresh-btn" id="refreshBtn">&#8635; Refresh</button>
+    </div>
+  </header>
+
+  <div id="configWarn" class="config-warn hidden"></div>
+
+  <!-- ============ TAB NAV ============ -->
+  <nav class="tabnav" id="tabnav">
+    <button data-tab="game" class="active">&#9824; Scoreboard</button>
+    <button data-tab="records">&#9827; Records</button>
+  </nav>
+
+  <!-- ============ NEW GAME PANEL ============ -->
+  <section class="panel tab-game" id="setupPanel">
+    <div class="panel-title"><span class="suit">&#9824;</span> New Game</div>
+    <div class="panel-sub">Choose a format, name the players, set the finish line.</div>
+
+    <div class="mode-row" id="modeRow">
+      <button data-mode="solo" class="active">Solo
+        <span class="sub">4 players, every soul for themselves</span>
+      </button>
+      <button data-mode="team">Partners
+        <span class="sub">2 teams of 2, partners sit across</span>
+      </button>
+    </div>
+
+    <div class="name-grid" id="nameGrid"><!-- filled by JS --></div>
+
+    <label class="field" style="margin-top:16px;">
+      <span>Game ends when a score reaches</span>
+      <input type="number" id="endScore" value="100" min="10" max="1000" step="5" />
+    </label>
+
+    <div class="btn-row">
+      <button class="btn" id="startBtn">Deal the First Hand</button>
+      <span id="setupViewerNote" class="viewer-lock hidden" style="flex:1;">
+        You are in Viewer mode. Switch to Scorekeeper to start a game.
+      </span>
+    </div>
+  </section>
+
+  <!-- ============ SCOREBOARD PANEL ============ -->
+  <section class="panel hidden tab-game" id="gamePanel">
+    <div class="panel-title">
+      <span class="suit">&#9829;</span> <span id="gameModeTitle">Scoreboard</span>
+    </div>
+    <div class="panel-sub" id="gameMeta">Round 1 &middot; first to 100 loses... or wins, depending who you ask.</div>
+
+    <div class="scoreboard" id="scoreboard"><!-- filled by JS --></div>
+
+    <!-- round entry (scorekeeper only) -->
+    <div class="round-entry" id="roundEntry">
+      <div class="panel-sub" style="margin-bottom:12px;">
+        Enter <strong>Round <span id="roundNum">1</span></strong> &mdash; points taken this hand.
+        The four scores must total <strong>26</strong>.
+      </div>
+      <div class="entry-grid" id="entryGrid"><!-- filled by JS --></div>
+      <div class="moon-row">
+        <label><input type="checkbox" id="moonCheck" /> Someone shot the moon</label>
+        <select id="moonWho" disabled><!-- filled by JS --></select>
+        <select id="moonStyle" disabled>
+          <option value="others">everyone else +26</option>
+          <option value="self">shooter &minus;26</option>
+        </select>
+      </div>
+      <div class="entry-sum" id="entrySum">Total: 0 / 26</div>
+      <div class="btn-row">
+        <button class="btn" id="addRoundBtn">Record Round</button>
+        <button class="btn ghost small" id="undoBtn">Undo Last Round</button>
+        <button class="btn ghost small" id="newGameBtn">Abandon Game</button>
+      </div>
+    </div>
+
+    <div class="viewer-lock hidden" id="viewerLock">
+      You are watching live as a Viewer. The scorekeeper controls the game.
+    </div>
+  </section>
+
+  <!-- ============ WINNER BANNER ============ -->
+  <div class="winner-banner hidden tab-game" id="winnerBanner">
+    <div class="crown">&#9819;</div>
+    <h2 id="winnerName">Winner</h2>
+    <p id="winnerLine">took the fewest hearts to heart.</p>
+    <div class="winner-actions" id="winnerActions">
+      <button class="btn" id="saveRecordBtn">Save to Records</button>
+      <span class="saved-note hidden" id="savedNote">&#10003; Saved to lifetime records</span>
+    </div>
+  </div>
+
+  <!-- ============ HISTORY PANEL ============ -->
+  <section class="panel hidden tab-game" id="historyPanel">
+    <div class="panel-title"><span class="suit">&#9827;</span> Round History</div>
+    <div class="panel-sub">Every hand played this game.</div>
+    <div id="historyWrap"></div>
+  </section>
+
+  <!-- ============ RECORDS PANEL ============ -->
+  <section class="panel tab-records hidden" id="recordsPanel">
+    <div class="panel-title"><span class="suit">&#9827;</span> Lifetime Records</div>
+    <div class="panel-sub">Wins, losses, and points carried across every completed game.</div>
+
+    <div class="subtab-row" id="subtabRow">
+      <button data-sub="players" class="active">Players</button>
+      <button data-sub="teams">Teams</button>
+    </div>
+
+    <div id="recordsPlayers" class="sub-players"></div>
+    <div id="recordsTeams" class="sub-teams hidden"></div>
+
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn ghost small" id="clearRecordsBtn">Clear All Records</button>
+    </div>
+  </section>
+
+  <footer>
+    Hearts &amp; Tallies &middot; scores synced through JSONBin &middot; built for kitchen tables everywhere
+  </footer>
+</div>
+
+<script>
+/* ================================================================
+   HEARTS SCOREKEEPER  —  SETUP (do this once, then commit to GitHub)
+   ================================================================
+   Fill in the two values just below this comment.
+
+     BIN_ID     : the ID of the bin you create on jsonbin.io
+     ACCESS_KEY : an ACCESS KEY (NOT your Master Key) scoped to
+                  READ + UPDATE on that one bin only.
+
+   Step by step:
+     1. Make a free account at https://jsonbin.io
+     2. Create a new bin. Paste this as its starting content:
+            { "game": null }
+        Save it, then copy the BIN ID (shown in the bin's URL/view).
+     3. Go to API Keys  ->  Access Keys  ->  Create Access Key.
+        Permissions: turn ON "Bin Read" and "Bin Update" only.
+        Leave "Bin Delete" OFF. Copy the Access Key it gives you.
+     4. Paste both values between the quotes below.
+     5. Commit index.html to your repo, enable GitHub Pages.
+
+   NOTE: because a GitHub Pages repo is usually public, this Access
+   Key will be visible in the page source. That's why it must be a
+   scoped Access Key and NOT your Master Key — worst case someone
+   edits your Hearts scores, not your whole account.
+
+   SCOREKEEPER vs VIEWER:
+     The same file serves both. Use the toggle in the header.
+     Scorekeeper can edit; Viewer just watches and auto-refreshes
+     every few seconds. The choice is remembered per browser.
+     Only one person should be Scorekeeper at a time.
+   ================================================================ */
+(function () {
+  "use strict";
+
+  const CONFIG = {
+    binId:     "PASTE_YOUR_BIN_ID_HERE",
+    accessKey: "PASTE_YOUR_ACCESS_KEY_HERE"
+  };
+
+  const TOTAL_PER_ROUND = 26;
+  const POLL_MS = 5000;
+
+  // ---------- element refs ----------
+  const $ = (id) => document.getElementById(id);
+  const roleToggle   = $("roleToggle");
+  const syncDot      = $("syncDot");
+  const syncText     = $("syncText");
+  const refreshBtn   = $("refreshBtn");
+  const configWarn   = $("configWarn");
+  const setupPanel   = $("setupPanel");
+  const modeRow      = $("modeRow");
+  const nameGrid     = $("nameGrid");
+  const endScoreInp  = $("endScore");
+  const startBtn     = $("startBtn");
+  const setupViewerNote = $("setupViewerNote");
+  const gamePanel    = $("gamePanel");
+  const gameModeTitle= $("gameModeTitle");
+  const gameMeta     = $("gameMeta");
+  const scoreboard   = $("scoreboard");
+  const roundEntry   = $("roundEntry");
+  const roundNum     = $("roundNum");
+  const entryGrid    = $("entryGrid");
+  const moonCheck    = $("moonCheck");
+  const moonWho      = $("moonWho");
+  const moonStyle    = $("moonStyle");
+  const entrySum     = $("entrySum");
+  const addRoundBtn  = $("addRoundBtn");
+  const undoBtn      = $("undoBtn");
+  const newGameBtn   = $("newGameBtn");
+  const viewerLock   = $("viewerLock");
+  const winnerBanner = $("winnerBanner");
+  const winnerName   = $("winnerName");
+  const winnerLine   = $("winnerLine");
+  const historyPanel = $("historyPanel");
+  const historyWrap  = $("historyWrap");
+  const tabnav       = $("tabnav");
+  const recordsPanel = $("recordsPanel");
+  const subtabRow    = $("subtabRow");
+  const recordsPlayers = $("recordsPlayers");
+  const recordsTeams = $("recordsTeams");
+  const clearRecordsBtn = $("clearRecordsBtn");
+  const saveRecordBtn = $("saveRecordBtn");
+  const savedNote    = $("savedNote");
+
+  // ---------- local UI state ----------
+  let role = localStorage.getItem("hearts_role") || "scorekeeper";
+  let setupMode = "solo";              // "solo" | "team"
+  let game = null;                     // the synced active game object
+  let records = { players: {}, teams: {} }; // synced lifetime records
+  let activeTab = "game";              // "game" | "records"
+  let activeSubtab = "players";        // "players" | "teams"
+  let pollTimer = null;
+  let lastRemoteString = null;         // to detect remote changes
+  let saving = false;
+
+  const isConfigured = () =>
+    CONFIG.binId && CONFIG.binId !== "PASTE_YOUR_BIN_ID_HERE" &&
+    CONFIG.accessKey && CONFIG.accessKey !== "PASTE_YOUR_ACCESS_KEY_HERE";
+
+  // ============================================================
+  //  JSONBIN SYNC
+  // ============================================================
+  const BIN_URL = () => "https://api.jsonbin.io/v3/b/" + CONFIG.binId;
+
+  function setSync(state, text) {
+    syncDot.className = "dot " + state; // live | err | idle
+    syncText.textContent = text;
+  }
+
+  async function pullGame() {
+    if (!isConfigured()) return;
+    try {
+      const res = await fetch(BIN_URL() + "/latest", {
+        headers: { "X-Access-Key": CONFIG.accessKey }
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const record = data.record || {};
+      const incoming = record.game || null;
+      const incomingRecords = normalizeRecords(record.records);
+      // The bin holds both the active game and lifetime records.
+      // Detect a change in EITHER and re-render if so, so we don't
+      // stomp a scorekeeper mid-edit unnecessarily.
+      const incomingString = JSON.stringify({ g: incoming, r: incomingRecords });
+      if (incomingString !== lastRemoteString) {
+        lastRemoteString = incomingString;
+        game = incoming;
+        records = incomingRecords;
+        render();
+      }
+      const when = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setSync("live", (role === "viewer" ? "Watching live" : "Synced") + " &middot; " + when);
+      syncText.innerHTML = (role === "viewer" ? "Watching live &middot; " : "Synced &middot; ") + when;
+    } catch (err) {
+      setSync("err", "Sync error &mdash; will retry");
+      syncText.innerHTML = "Sync error &mdash; will retry";
+      console.error("pullGame failed:", err);
+    }
+  }
+
+  async function pushGame() {
+    if (!isConfigured()) return;
+    if (role !== "scorekeeper") return;
+    saving = true;
+    try {
+      const payload = { game: game, records: records };
+      const body = JSON.stringify(payload);
+      const res = await fetch(BIN_URL(), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Access-Key": CONFIG.accessKey
+        },
+        body: body
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      lastRemoteString = JSON.stringify({ g: game, r: records });
+      const when = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      syncText.innerHTML = "Saved &middot; " + when;
+      setSync("live", "Saved");
+    } catch (err) {
+      setSync("err", "Save failed &mdash; check connection");
+      syncText.innerHTML = "Save failed &mdash; check connection";
+      console.error("pushGame failed:", err);
+    } finally {
+      saving = false;
+    }
+  }
+
+  // Ensures a records object always has the expected shape, even if
+  // the bin is fresh or was created before records existed.
+  function normalizeRecords(r) {
+    if (!r || typeof r !== "object") return { players: {}, teams: {} };
+    return {
+      players: (r.players && typeof r.players === "object") ? r.players : {},
+      teams:   (r.teams   && typeof r.teams   === "object") ? r.teams   : {}
+    };
+  }
+
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(() => {
+      // Scorekeeper also polls (in case roles got crossed) but less
+      // disruptively; viewer relies on it entirely.
+      if (!saving) pullGame();
+    }, POLL_MS);
+  }
+  function stopPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  // ============================================================
+  //  GAME MODEL
+  // ============================================================
+  // game = {
+  //   mode: "solo" | "team",
+  //   endScore: number,
+  //   players: [{ name }]  (4 entries; in team mode index 0&2 = team A, 1&3 = team B)
+  //   rounds: [ { scores:[n,n,n,n], moon:{who:idx,style}|null } ],
+  //   createdAt: iso
+  // }
+
+  function teamOf(idx) { return idx % 2 === 0 ? 0 : 1; }
+  function playersOfTeam(t) { return t === 0 ? [0, 2] : [1, 3]; }
+
+  function playerTotals() {
+    if (!game) return [0,0,0,0];
+    const totals = [0,0,0,0];
+    game.rounds.forEach(r => {
+      r.scores.forEach((s, i) => { totals[i] += s; });
+    });
+    return totals;
+  }
+  function teamTotals() {
+    const pt = playerTotals();
+    return [ pt[0] + pt[2], pt[1] + pt[3] ];
+  }
+
+  function checkWinner() {
+    if (!game || game.rounds.length === 0) return null;
+    const pt = playerTotals();
+    if (game.mode === "solo") {
+      const max = Math.max(...pt);
+      if (max < game.endScore) return null;
+      // game over: lowest score wins
+      const min = Math.min(...pt);
+      const winnerIdx = [0,1,2,3].filter(i => pt[i] === min);
+      return {
+        type: "solo",
+        winners: winnerIdx.map(i => game.players[i].name),
+        winnerIdx: winnerIdx,
+        score: min,
+        playerTotals: pt
+      };
+    } else {
+      const tt = teamTotals();
+      const max = Math.max(...tt);
+      if (max < game.endScore) return null;
+      const min = Math.min(...tt);
+      const winnerTeams = [0,1].filter(t => tt[t] === min);
+      return {
+        type: "team",
+        winners: winnerTeams.map(t => {
+          const [a,b] = playersOfTeam(t);
+          return game.players[a].name + " & " + game.players[b].name;
+        }),
+        winnerTeams: winnerTeams,
+        score: min,
+        playerTotals: pt,
+        teamTotals: tt
+      };
+    }
+  }
+
+  // ============================================================
+  //  SETUP PANEL
+  // ============================================================
+  function buildNameGrid() {
+    nameGrid.innerHTML = "";
+    if (setupMode === "solo") {
+      for (let i = 0; i < 4; i++) {
+        nameGrid.appendChild(nameField(i, "Player " + (i + 1)));
+      }
+    } else {
+      const teamA = document.createElement("div");
+      teamA.className = "team-label";
+      teamA.textContent = "\u2660 Team One  (partners across)";
+      nameGrid.appendChild(teamA);
+      nameGrid.appendChild(nameField(0, "Team One \u2014 Player A"));
+      nameGrid.appendChild(nameField(2, "Team One \u2014 Player B"));
+      const teamB = document.createElement("div");
+      teamB.className = "team-label";
+      teamB.textContent = "\u2665 Team Two  (partners across)";
+      nameGrid.appendChild(teamB);
+      nameGrid.appendChild(nameField(1, "Team Two \u2014 Player A"));
+      nameGrid.appendChild(nameField(3, "Team Two \u2014 Player B"));
+    }
+  }
+  function nameField(idx, placeholder) {
+    const lbl = document.createElement("label");
+    lbl.className = "field";
+    const span = document.createElement("span");
+    span.textContent = placeholder;
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.placeholder = placeholder;
+    inp.dataset.idx = idx;
+    inp.className = "name-input";
+    inp.maxLength = 24;
+    lbl.appendChild(span);
+    lbl.appendChild(inp);
+    return lbl;
+  }
+
+  modeRow.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    setupMode = btn.dataset.mode;
+    [...modeRow.children].forEach(b => b.classList.toggle("active", b === btn));
+    buildNameGrid();
+  });
+
+  startBtn.addEventListener("click", () => {
+    if (role !== "scorekeeper") return;
+    const inputs = [...nameGrid.querySelectorAll(".name-input")];
+    const players = [0,1,2,3].map(i => ({ name: "" }));
+    inputs.forEach(inp => {
+      const idx = parseInt(inp.dataset.idx, 10);
+      players[idx].name = (inp.value.trim() || inp.placeholder);
+    });
+    const endScore = Math.max(10, parseInt(endScoreInp.value, 10) || 100);
+    game = {
+      mode: setupMode,
+      endScore: endScore,
+      players: players,
+      rounds: [],
+      createdAt: new Date().toISOString()
+    };
+    render();
+    pushGame();
+  });
+
+  // ============================================================
+  //  SCOREBOARD RENDER
+  // ============================================================
+  function render() {
+    applyRoleUI();
+    applyTabUI();
+    renderGameTab();
+    renderRecordsTab();
+  }
+
+  // Shows/hides the two tab groups and the subtab content.
+  function applyTabUI() {
+    [...tabnav.children].forEach(b =>
+      b.classList.toggle("active", b.dataset.tab === activeTab)
+    );
+    document.querySelectorAll(".tab-game").forEach(el =>
+      el.classList.toggle("hidden", activeTab !== "game")
+    );
+    document.querySelectorAll(".tab-records").forEach(el =>
+      el.classList.toggle("hidden", activeTab !== "records")
+    );
+    // when on the records tab, the winner banner (a tab-game element)
+    // is hidden by the rule above, which is what we want.
+    [...subtabRow.children].forEach(b =>
+      b.classList.toggle("active", b.dataset.sub === activeSubtab)
+    );
+    recordsPlayers.classList.toggle("hidden", activeSubtab !== "players");
+    recordsTeams.classList.toggle("hidden", activeSubtab !== "teams");
+  }
+
+  function renderGameTab() {
+    if (!game) {
+      // setupPanel stays visible (it's a tab-game element); just make
+      // sure the in-game panels are hidden.
+      if (activeTab === "game") setupPanel.classList.remove("hidden");
+      gamePanel.classList.add("hidden");
+      historyPanel.classList.add("hidden");
+      winnerBanner.classList.add("hidden");
+      return;
+    }
+
+    setupPanel.classList.add("hidden");
+    if (activeTab === "game") {
+      gamePanel.classList.remove("hidden");
+      historyPanel.classList.remove("hidden");
+    }
+
+    const winner = checkWinner();
+
+    gameModeTitle.textContent = game.mode === "solo" ? "Solo Scoreboard" : "Partners Scoreboard";
+    const roundsPlayed = game.rounds.length;
+    gameMeta.innerHTML = winner
+      ? "Game complete after <strong>" + roundsPlayed + "</strong> round" + (roundsPlayed===1?"":"s") + "."
+      : "Round <strong>" + (roundsPlayed + 1) + "</strong> &middot; game ends at <strong>" + game.endScore + "</strong> points.";
+
+    renderScoreboard(winner);
+    renderRoundEntry(winner);
+    renderHistory();
+    renderWinner(winner);
+  }
+
+  function renderScoreboard(winner) {
+    scoreboard.innerHTML = "";
+    if (game.mode === "solo") {
+      const totals = playerTotals();
+      const min = Math.min(...totals);
+      const max = Math.max(...totals);
+      game.players.forEach((p, i) => {
+        const card = document.createElement("div");
+        card.className = "player-card";
+        if (totals[i] === min && roundsPlayed() > 0) card.classList.add("leader");
+        if (totals[i] === max && roundsPlayed() > 0 && max !== min) card.classList.add("danger");
+        card.innerHTML =
+          '<div class="who">' + escapeHtml(p.name) +
+            '<small>' + (totals[i] === min && roundsPlayed() > 0 ? "in the lead" : "&nbsp;") + '</small>' +
+          '</div>' +
+          '<div class="score">' + totals[i] + '<small> pts</small></div>';
+        scoreboard.appendChild(card);
+      });
+    } else {
+      const tt = teamTotals();
+      const pt = playerTotals();
+      const min = Math.min(...tt);
+      const max = Math.max(...tt);
+      const teamNames = ["Team One", "Team Two"];
+      [0,1].forEach(t => {
+        const block = document.createElement("div");
+        block.className = "team-block";
+        if (tt[t] === min && roundsPlayed() > 0) block.classList.add("leader");
+        if (tt[t] === max && roundsPlayed() > 0 && max !== min) block.classList.add("danger");
+        const [a,b] = playersOfTeam(t);
+        block.innerHTML =
+          '<div class="team-head">' +
+            '<span class="tname">' + teamNames[t] +
+              (tt[t] === min && roundsPlayed() > 0 ? ' &mdash; leading' : '') + '</span>' +
+            '<span class="ttotal">' + tt[t] + '</span>' +
+          '</div>' +
+          '<div class="team-member"><span>' + escapeHtml(game.players[a].name) + '</span><span class="mscore">' + pt[a] + '</span></div>' +
+          '<div class="team-member"><span>' + escapeHtml(game.players[b].name) + '</span><span class="mscore">' + pt[b] + '</span></div>';
+        scoreboard.appendChild(block);
+      });
+    }
+  }
+  function roundsPlayed() { return game ? game.rounds.length : 0; }
+
+  // ============================================================
+  //  ROUND ENTRY
+  // ============================================================
+  function renderRoundEntry(winner) {
+    if (role !== "scorekeeper" || winner) {
+      roundEntry.classList.add("hidden");
+      viewerLock.classList.toggle("hidden", role === "scorekeeper");
+      if (winner && role === "scorekeeper") {
+        viewerLock.classList.add("hidden");
+      }
+      return;
+    }
+    roundEntry.classList.remove("hidden");
+    viewerLock.classList.add("hidden");
+    roundNum.textContent = roundsPlayed() + 1;
+
+    // build the 4 entry inputs if needed
+    if (entryGrid.children.length === 0 || entryGrid.dataset.builtFor !== game.createdAt) {
+      entryGrid.innerHTML = "";
+      entryGrid.dataset.builtFor = game.createdAt;
+      game.players.forEach((p, i) => {
+        const lbl = document.createElement("label");
+        lbl.className = "field";
+        const span = document.createElement("span");
+        span.textContent = p.name;
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.min = "0"; inp.max = "26"; inp.step = "1";
+        inp.value = "0";
+        inp.dataset.idx = i;
+        inp.className = "entry-input";
+        inp.addEventListener("input", recalcEntry);
+        lbl.appendChild(span); lbl.appendChild(inp);
+        entryGrid.appendChild(lbl);
+      });
+      const sumEl = document.createElement("div");
+      sumEl.className = "entry-sum";
+      sumEl.id = "entrySumInline";
+      // we already have entrySum in markup; keep single source — remove inline
+      // (not appending sumEl; using existing #entrySum)
+
+      // moon dropdown options
+      moonWho.innerHTML = "";
+      game.players.forEach((p, i) => {
+        const opt = document.createElement("option");
+        opt.value = i; opt.textContent = p.name;
+        moonWho.appendChild(opt);
+      });
+    }
+    recalcEntry();
+  }
+
+  moonCheck.addEventListener("change", () => {
+    const on = moonCheck.checked;
+    moonWho.disabled = !on;
+    moonStyle.disabled = !on;
+    // when moon is on, the manual entry inputs are ignored
+    [...entryGrid.querySelectorAll(".entry-input")].forEach(inp => {
+      inp.disabled = on;
+    });
+    recalcEntry();
+  });
+  moonWho.addEventListener("change", recalcEntry);
+  moonStyle.addEventListener("change", recalcEntry);
+
+  function currentEntryScores() {
+    // returns {scores:[4], moon:null|{who,style}, valid:bool, sum:number}
+    if (moonCheck.checked) {
+      const who = parseInt(moonWho.value, 10);
+      const style = moonStyle.value;
+      let scores;
+      if (style === "others") {
+        scores = [0,1,2,3].map(i => i === who ? 0 : 26);
+      } else {
+        scores = [0,1,2,3].map(i => i === who ? -26 : 0);
+      }
+      return { scores, moon: { who, style }, valid: true, sum: scores.reduce((a,b)=>a+b,0) };
+    }
+    const inputs = [...entryGrid.querySelectorAll(".entry-input")];
+    const scores = [0,0,0,0];
+    inputs.forEach(inp => {
+      scores[parseInt(inp.dataset.idx,10)] = Math.max(0, Math.min(26, parseInt(inp.value,10) || 0));
+    });
+    const sum = scores.reduce((a,b)=>a+b,0);
+    return { scores, moon: null, valid: sum === TOTAL_PER_ROUND, sum };
+  }
+
+  function recalcEntry() {
+    const e = currentEntryScores();
+    if (e.moon) {
+      entrySum.textContent = e.style === "self"
+        ? "Moon shot \u2014 shooter takes \u221226, the rest stay put."
+        : "Moon shot \u2014 everyone else takes +26.";
+      entrySum.className = "entry-sum good";
+      addRoundBtn.disabled = false;
+    } else {
+      entrySum.textContent = "Total: " + e.sum + " / " + TOTAL_PER_ROUND;
+      if (e.sum === TOTAL_PER_ROUND) {
+        entrySum.className = "entry-sum good";
+        addRoundBtn.disabled = false;
+      } else {
+        entrySum.className = "entry-sum bad";
+        addRoundBtn.disabled = true;
+      }
+    }
+  }
+
+  addRoundBtn.addEventListener("click", () => {
+    if (role !== "scorekeeper" || !game) return;
+    const e = currentEntryScores();
+    if (!e.valid) return;
+    game.rounds.push({ scores: e.scores, moon: e.moon });
+    // reset entry inputs
+    moonCheck.checked = false;
+    moonWho.disabled = true;
+    moonStyle.disabled = true;
+    [...entryGrid.querySelectorAll(".entry-input")].forEach(inp => {
+      inp.disabled = false; inp.value = "0";
+    });
+    render();
+    pushGame();
+  });
+
+  undoBtn.addEventListener("click", () => {
+    if (role !== "scorekeeper" || !game || game.rounds.length === 0) return;
+    game.rounds.pop();
+    render();
+    pushGame();
+  });
+
+  newGameBtn.addEventListener("click", () => {
+    if (role !== "scorekeeper") return;
+    if (!confirm("Abandon this game and return to setup? This clears the shared scoreboard.")) return;
+    game = null;
+    render();
+    pushGame();
+  });
+
+  // ============================================================
+  //  HISTORY
+  // ============================================================
+  function renderHistory() {
+    if (!game || game.rounds.length === 0) {
+      historyWrap.innerHTML = '<div class="empty-note" style="color:var(--ink-soft);opacity:1;">No rounds recorded yet.</div>';
+      return;
+    }
+    const tbl = document.createElement("table");
+    tbl.className = "history-table";
+    let head = "<tr><th>Round</th>";
+    game.players.forEach(p => { head += "<th>" + escapeHtml(p.name) + "</th>"; });
+    head += "</tr>";
+
+    let bodyRows = "";
+    const running = [0,0,0,0];
+    game.rounds.forEach((r, ri) => {
+      r.scores.forEach((s,i)=> running[i]+=s);
+      const moonTag = r.moon ? ' <span title="moon shot">&#9789;</span>' : "";
+      let row = "<tr" + (r.moon ? ' class="moon"' : "") + "><td>" + (ri+1) + moonTag + "</td>";
+      r.scores.forEach(s => {
+        row += "<td>" + (s > 0 ? "+" + s : s) + "</td>";
+      });
+      row += "</tr>";
+      bodyRows += row;
+    });
+
+    let totRow = '<tr class="tot-row"><td>Total</td>';
+    running.forEach(t => { totRow += "<td>" + t + "</td>"; });
+    totRow += "</tr>";
+
+    tbl.innerHTML = head + bodyRows + totRow;
+    historyWrap.innerHTML = "";
+    historyWrap.appendChild(tbl);
+
+    if (game.mode === "team") {
+      const tt = teamTotals();
+      const note = document.createElement("div");
+      note.className = "panel-sub";
+      note.style.marginTop = "12px";
+      note.style.marginBottom = "0";
+      note.innerHTML = "Team totals &mdash; <strong>Team One:</strong> " + tt[0] +
+                       " &nbsp;&middot;&nbsp; <strong>Team Two:</strong> " + tt[1];
+      historyWrap.appendChild(note);
+    }
+  }
+
+  // ============================================================
+  //  WINNER
+  // ============================================================
+  function renderWinner(winner) {
+    if (!winner) {
+      winnerBanner.classList.add("hidden");
+      return;
+    }
+    if (activeTab === "game") winnerBanner.classList.remove("hidden");
+    const names = winner.winners.join(" & ");
+    if (winner.winners.length > 1) {
+      winnerName.textContent = "A Tie! " + names;
+      winnerLine.textContent = "tied at " + winner.score + " \u2014 a shared victory, both sides take the win.";
+    } else {
+      winnerName.textContent = names + " wins";
+      winnerLine.textContent = "finished lowest with " + winner.score + " point" + (winner.score===1?"":"s") + ". The hearts found someone else.";
+    }
+
+    // Save-to-Records button: scorekeeper only, and only until this
+    // game has been recorded once (tracked by game.recorded flag).
+    const alreadySaved = !!(game && game.recorded);
+    saveRecordBtn.classList.toggle("hidden", role !== "scorekeeper" || alreadySaved);
+    savedNote.classList.toggle("hidden", !alreadySaved);
+  }
+
+  // ============================================================
+  //  LIFETIME RECORDS
+  // ============================================================
+  // records = {
+  //   players: { "<nameKey>": { name, wins, losses, ties, points, games } },
+  //   teams:   { "<pairKey>": { names:[a,b], wins, losses, ties, points, games } }
+  // }
+  // nameKey  = lowercased trimmed name
+  // pairKey  = the two name keys sorted and joined, so seating doesn't matter
+
+  function nameKey(n) { return String(n).trim().toLowerCase(); }
+  function pairKey(a, b) { return [nameKey(a), nameKey(b)].sort().join("\u241F"); }
+
+  function blankPlayer(name) {
+    return { name: name, wins: 0, losses: 0, ties: 0, points: 0, games: 0 };
+  }
+  function blankTeam(a, b) {
+    return { names: [a, b], wins: 0, losses: 0, ties: 0, points: 0, games: 0 };
+  }
+
+  // Folds a finished game into the records object. Pure-ish: mutates
+  // the passed records and returns it. Called only by the scorekeeper.
+  function applyGameToRecords(g, winner, rec) {
+    const pt = winner.playerTotals;
+    const isTie = winner.winners.length > 1;
+
+    // ----- individual player records -----
+    let winningPlayerIdx;
+    if (g.mode === "solo") {
+      winningPlayerIdx = new Set(winner.winnerIdx);
+    } else {
+      winningPlayerIdx = new Set();
+      winner.winnerTeams.forEach(t => playersOfTeam(t).forEach(i => winningPlayerIdx.add(i)));
+    }
+
+    g.players.forEach((p, i) => {
+      const k = nameKey(p.name);
+      if (!rec.players[k]) rec.players[k] = blankPlayer(p.name);
+      const pr = rec.players[k];
+      pr.name = p.name;            // keep latest spelling/casing
+      pr.points += pt[i];
+      pr.games += 1;
+      if (winningPlayerIdx.has(i)) {
+        // a tie at the winning score counts as a win for everyone tied
+        pr.wins += 1;
+        if (isTie) pr.ties += 1;   // also note it was a shared win
+      } else {
+        pr.losses += 1;
+      }
+    });
+
+    // ----- team records (team mode only) -----
+    if (g.mode === "team") {
+      [0,1].forEach(t => {
+        const [a,b] = playersOfTeam(t);
+        const nameA = g.players[a].name, nameB = g.players[b].name;
+        const k = pairKey(nameA, nameB);
+        if (!rec.teams[k]) rec.teams[k] = blankTeam(nameA, nameB);
+        const tr = rec.teams[k];
+        tr.names = [nameA, nameB];
+        tr.points += pt[a] + pt[b];
+        tr.games += 1;
+        const won = winner.winnerTeams.indexOf(t) !== -1;
+        if (won) {
+          tr.wins += 1;
+          if (isTie) tr.ties += 1;
+        } else {
+          tr.losses += 1;
+        }
+      });
+    }
+    return rec;
+  }
+
+  saveRecordBtn.addEventListener("click", () => {
+    if (role !== "scorekeeper" || !game) return;
+    const winner = checkWinner();
+    if (!winner) return;
+    if (game.recorded) return;
+    records = normalizeRecords(records);
+    applyGameToRecords(game, winner, records);
+    game.recorded = true;          // prevents double-counting
+    render();
+    pushGame();
+  });
+
+  clearRecordsBtn.addEventListener("click", () => {
+    if (role !== "scorekeeper") {
+      alert("Only the scorekeeper can clear records.");
+      return;
+    }
+    if (!confirm("Erase ALL lifetime player and team records? This cannot be undone.")) return;
+    records = { players: {}, teams: {} };
+    render();
+    pushGame();
+  });
+
+  function renderRecordsTab() {
+    renderPlayerRecords();
+    renderTeamRecords();
+  }
+
+  function renderPlayerRecords() {
+    const list = Object.values(records.players || {});
+    if (list.length === 0) {
+      recordsPlayers.innerHTML =
+        '<div class="empty-note" style="color:var(--ink-soft);opacity:1;">' +
+        'No games recorded yet. Finish a game and tap &ldquo;Save to Records&rdquo;.</div>';
+      return;
+    }
+    // sort: most wins first, then fewest losses, then fewest points
+    list.sort((a,b) =>
+      b.wins - a.wins || a.losses - b.losses || a.points - b.points
+    );
+    let rows = "";
+    list.forEach(p => {
+      const avg = p.games > 0 ? (p.points / p.games) : 0;
+      rows +=
+        "<tr>" +
+          "<td>" + escapeHtml(p.name) + "</td>" +
+          '<td class="w">' + p.wins + "</td>" +
+          '<td class="l">' + p.losses + "</td>" +
+          "<td>" + p.ties + "</td>" +
+          "<td>" + p.games + "</td>" +
+          "<td>" + p.points + "</td>" +
+          "<td>" + avg.toFixed(1) + "</td>" +
+        "</tr>";
+    });
+    recordsPlayers.innerHTML =
+      '<table class="record-table">' +
+        "<tr><th>Player</th><th>Wins</th><th>Losses</th><th>Tied Wins</th>" +
+        "<th>Games</th><th>Total Pts</th><th>Avg / Game</th></tr>" +
+        rows +
+      "</table>" +
+      '<div class="panel-sub" style="margin-top:12px;margin-bottom:0;">' +
+        "&ldquo;Total Pts&rdquo; is every point taken across all completed games &mdash; " +
+        "hearts, the Queen, moon-shot swings, all of it. Lower is better." +
+      "</div>";
+  }
+
+  function renderTeamRecords() {
+    const list = Object.values(records.teams || {});
+    if (list.length === 0) {
+      recordsTeams.innerHTML =
+        '<div class="empty-note" style="color:var(--ink-soft);opacity:1;">' +
+        'No partner games recorded yet. Team records appear here once you ' +
+        'finish and save a Partners game.</div>';
+      return;
+    }
+    list.sort((a,b) =>
+      b.wins - a.wins || a.losses - b.losses || a.points - b.points
+    );
+    let rows = "";
+    list.forEach(t => {
+      const avg = t.games > 0 ? (t.points / t.games) : 0;
+      rows +=
+        "<tr>" +
+          "<td>" + escapeHtml(t.names[0]) + " &amp; " + escapeHtml(t.names[1]) + "</td>" +
+          '<td class="w">' + t.wins + "</td>" +
+          '<td class="l">' + t.losses + "</td>" +
+          "<td>" + t.ties + "</td>" +
+          "<td>" + t.games + "</td>" +
+          "<td>" + t.points + "</td>" +
+          "<td>" + avg.toFixed(1) + "</td>" +
+        "</tr>";
+    });
+    recordsTeams.innerHTML =
+      '<table class="record-table">' +
+        "<tr><th>Pairing</th><th>Wins</th><th>Losses</th><th>Tied Wins</th>" +
+        "<th>Games</th><th>Total Pts</th><th>Avg / Game</th></tr>" +
+        rows +
+      "</table>" +
+      '<div class="panel-sub" style="margin-top:12px;margin-bottom:0;">' +
+        "A pairing is tracked by its two players regardless of where they sat. " +
+        "&ldquo;Total Pts&rdquo; is the team&rsquo;s combined points across saved games." +
+      "</div>";
+  }
+
+  // ============================================================
+  //  ROLE HANDLING
+  // ============================================================
+  function applyRoleUI() {
+    [...roleToggle.children].forEach(b =>
+      b.classList.toggle("active", b.dataset.role === role)
+    );
+    // setup panel inputs
+    const setupInputs = setupPanel.querySelectorAll("input, button");
+    const lockSetup = (role === "viewer");
+    setupViewerNote.classList.toggle("hidden", !lockSetup);
+    startBtn.classList.toggle("hidden", lockSetup);
+    nameGrid.querySelectorAll("input").forEach(i => i.disabled = lockSetup);
+    endScoreInp.disabled = lockSetup;
+    [...modeRow.children].forEach(b => b.disabled = lockSetup);
+  }
+
+  roleToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    role = btn.dataset.role;
+    localStorage.setItem("hearts_role", role);
+    render();
+    // a viewer should immediately pull fresh; a scorekeeper too
+    pullGame();
+  });
+
+  refreshBtn.addEventListener("click", () => {
+    pullGame();
+  });
+
+  tabnav.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    activeTab = btn.dataset.tab;
+    render();
+  });
+
+  subtabRow.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    activeSubtab = btn.dataset.sub;
+    render();
+  });
+
+  // ============================================================
+  //  UTIL
+  // ============================================================
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  // ============================================================
+  //  BOOT
+  // ============================================================
+  function boot() {
+    buildNameGrid();
+    applyRoleUI();
+
+    if (!isConfigured()) {
+      configWarn.classList.remove("hidden");
+      configWarn.innerHTML =
+        "<strong>Almost there.</strong> This app isn't connected to JSONBin yet. " +
+        "Open <code>index.html</code>, find the <code>CONFIG</code> block near the top " +
+        "of the script, and fill in <code>binId</code> and <code>accessKey</code> " +
+        "(full step-by-step instructions are in the comment right above it). " +
+        "Until then you can explore the interface, but nothing will sync between devices.";
+      setSync("idle", "Not connected");
+      syncText.textContent = "Not connected";
+      render();
+      return;
+    }
+
+    setSync("idle", "Connecting...");
+    syncText.textContent = "Connecting...";
+    pullGame().then(() => {
+      render();
+      startPolling();
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
