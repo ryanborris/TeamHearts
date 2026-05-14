@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Family Hearts">
+<meta name="theme-color" content="#1a2e26">
+<title>Family Hearts</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1f1a;--surface:#1a2e26;--surface2:#213829;--surface3:#162219;
+  --border:#2e4a3a;--border2:#4a6e58;
+  --text:#e8f0ec;--muted:#7aaa90;--dim:#4a7060;
+  --accent:#c0392b;--accent2:#e85d4a;--accentbg:#2a1510;
+  --green:#2ecc71;
+  --radius:10px;--radius-lg:14px;--radius-xl:20px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5;overflow-x:hidden}
+#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top,0)}
+.header-inner{display:flex;align-items:center;gap:10px;padding:14px 18px 0}
+.logo{font-size:20px;color:var(--accent2)}
+.app-title{font-size:17px;font-weight:600;letter-spacing:-.3px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);margin-left:auto;transition:background .3s;flex-shrink:0}
+.sync-dot.ok{background:var(--green);box-shadow:0 0 6px #2ecc7166}
+.sync-dot.err{background:var(--accent2)}
+.sync-dot.spin{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+nav{display:flex;margin-top:2px}
+nav button{flex:1;padding:11px 4px;font-size:12px;font-weight:500;letter-spacing:.3px;
+  background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s;font-family:inherit}
+nav button.active{color:var(--text);border-bottom-color:var(--accent2)}
+main{flex:1;padding:20px 18px 60px;overflow-y:auto}
+
+.btn{padding:11px 18px;font-size:14px;font-weight:600;border-radius:var(--radius);
+  cursor:pointer;transition:opacity .15s,transform .1s;border:none;font-family:inherit;width:100%}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff;margin-top:12px}
+.btn-primary:disabled{opacity:.4;cursor:default}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);width:auto;padding:10px 16px}
+.btn-icon{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;
+  padding:4px 8px;line-height:1;border-radius:6px;transition:color .15s,background .15s;font-family:inherit}
+.btn-icon:hover{color:var(--accent2);background:var(--surface2)}
+
+.seg{display:flex;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);
+  padding:3px;gap:3px;margin-bottom:18px}
+.seg button{flex:1;padding:8px;font-size:13px;font-weight:500;border:none;border-radius:7px;
+  background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit}
+.seg button.active{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:600;color:#fff;flex-shrink:0;letter-spacing:-.3px}
+.av-lg{width:36px;height:36px;font-size:12px}
+.av-md{width:28px;height:28px;font-size:10px}
+.av-sm{width:22px;height:22px;font-size:9px}
+
+.player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:18px}
+.player-tile{border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;background:var(--surface3);transition:all .12s;
+  -webkit-tap-highlight-color:transparent;user-select:none}
+.player-tile.sel{border-color:var(--accent2);background:var(--surface2)}
+.player-tile span{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.score-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.score-row{display:flex;align-items:center;gap:8px;border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 12px;background:var(--surface3)}
+.score-row span{flex:1;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-row input{width:60px;text-align:right;font-size:15px;font-weight:600;
+  background:transparent;border:none;color:var(--text);outline:none;font-family:inherit}
+.score-row input::placeholder{color:var(--dim)}
+
+.lb-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:14px}
+.lb-head{display:grid;grid-template-columns:1fr 48px 48px 48px 64px;
+  padding:8px 14px;font-size:11px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;
+  border-bottom:1px solid var(--border);background:var(--surface2)}
+.lb-row{display:grid;grid-template-columns:1fr 48px 48px 48px 64px;
+  padding:11px 14px;align-items:center;border-bottom:1px solid var(--border);background:var(--surface)}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:var(--surface2)}
+.tc{text-align:center}.tr{text-align:right}
+.wins{color:#2ecc71;font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.stat{background:var(--surface2);border-radius:var(--radius);padding:12px 10px}
+.stat .sl{font-size:10px;color:var(--muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px}
+.stat .sv{font-size:16px;font-weight:600}
+
+.game-card{border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:13px 15px;margin-bottom:10px;background:var(--surface)}
+.gm{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.gd{font-size:12px;color:var(--muted)}
+.gb{font-size:10px;padding:3px 9px;border-radius:99px;background:var(--surface2);
+  color:var(--muted);border:1px solid var(--border);text-transform:capitalize;letter-spacing:.4px}
+.gp{display:flex;align-items:center;gap:10px;padding:4px 0}
+.gr{font-size:11px;width:16px;text-align:center;color:var(--dim)}
+.gr.first{color:var(--accent2)}
+
+.roster-item{display:flex;align-items:center;gap:10px;border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:10px 14px;background:var(--surface);margin-bottom:8px}
+.add-row{display:flex;gap:8px;margin-bottom:18px}
+.add-row input{flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text);font-size:14px;padding:10px 13px;outline:none;transition:border-color .15s;font-family:inherit}
+.add-row input:focus{border-color:var(--border2)}
+.add-row input::placeholder{color:var(--dim)}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--surface2);border:1px solid var(--border2);border-radius:99px;
+  padding:9px 20px;font-size:13px;font-weight:500;color:var(--text);
+  z-index:999;transition:transform .3s cubic-bezier(.175,.885,.32,1.275),opacity .3s;
+  white-space:nowrap;pointer-events:none;opacity:0;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+.empty{text-align:center;padding:3rem 0;color:var(--muted);font-size:13px}
+.empty .big{font-size:28px;margin-bottom:10px;opacity:.5}
+.hint{font-size:11px;color:var(--dim);text-align:center;margin-top:16px;cursor:pointer}
+.hint:hover{color:var(--muted)}
+.loader{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
+.dot{display:inline-block;animation:blink .8s infinite alternate}
+.dot:nth-child(2){animation-delay:.25s}
+.dot:nth-child(3){animation-delay:.5s}
+@keyframes blink{from{opacity:.2}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+const API_KEY = '$2a$10$gSbxo0etJXmqOy/.WDj6O.7qP4zTM/3QM2kKpn7.bgGM1usdFe.ii';
+const BIN_ID  = '6a06089a250b1311c34e4710';
+const API     = 'https://api.jsonbin.io/v3/b';
+
+const AV_COLS=['#2c7a5a','#1a5fa8','#7a2c5a','#7a5a2c','#2c5a7a','#5a2c7a','#5a7a2c','#a83c1a','#1a7a7a','#7a1a2c'];
+let state=null, tab='play', ps={mode:'individual',sel:[],sc:{}}, syncTmr=null;
+
+function avc(n){let h=0;for(let i=0;i<n.length;i++)h=(h+n.charCodeAt(i)*31)%AV_COLS.length;return AV_COLS[h]}
+function ini(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?'}
+function av(n,c='av-lg'){return`<div class="av ${c}" style="background:${avc(n)}">${ini(n)}</div>`}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+let toastT=null;
+function toast(msg,dur=2600){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),dur);
+}
+function sd(s){
+  const d=document.getElementById('sd');if(!d)return;
+  d.className='sync-dot'+(s==='ok'?' ok':s==='err'?' err':s==='spin'?' spin':'');
+}
+
+async function readBin(){
+  const r=await fetch(`${API}/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});
+  if(!r.ok) throw new Error('Read failed');
+  return (await r.json()).record;
+}
+async function writeBin(data){
+  const r=await fetch(`${API}/${BIN_ID}`,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
+    body:JSON.stringify(data)
+  });
+  if(!r.ok) throw new Error('Write failed');
+}
+
+async function load(){
+  sd('spin');
+  try{
+    state=await readBin();
+    state.players=state.players||[];
+    state.games=state.games||[];
+    sd('ok');return true;
+  }catch(e){sd('err');return false}
+}
+async function save(){
+  sd('spin');
+  try{await writeBin(state);sd('ok');return true}
+  catch(e){sd('err');toast('Sync failed — check connection');return false}
+}
+
+function startRefresh(){
+  clearInterval(syncTmr);
+  syncTmr=setInterval(async()=>{
+    if(!document.hidden){
+      try{
+        const s=await readBin();
+        if(s){state=s;state.players=state.players||[];state.games=state.games||[];renderTab(tab)}
+      }catch(e){}
+    }
+  },15000);
+}
+
+function renderShell(){
+  document.getElementById('app').innerHTML=`
+  <header>
+    <div class="header-inner">
+      <span class="logo">♥</span>
+      <span class="app-title">Family Hearts</span>
+      <div class="sync-dot" id="sd"></div>
+    </div>
+    <nav>
+      <button id="t-play"    class="active" onclick="switchTab('play')">Play</button>
+      <button id="t-records"            onclick="switchTab('records')">Records</button>
+      <button id="t-history"            onclick="switchTab('history')">History</button>
+      <button id="t-roster"             onclick="switchTab('roster')">Roster</button>
+    </nav>
+  </header>
+  <main id="main"></main>`;
+}
+
+function switchTab(t){
+  tab=t;
+  ['play','records','history','roster'].forEach(x=>document.getElementById('t-'+x).classList.toggle('active',x===t));
+  renderTab(t);
+}
+function renderTab(t){
+  if(t==='play')    renderPlay();
+  else if(t==='records') renderRecords();
+  else if(t==='history') renderHistory();
+  else renderRoster();
+}
+
+// ── PLAY ─────────────────────────────────────────────────────────────────────
+function renderPlay(){
+  const el=document.getElementById('main');
+  const players=state.players||[];
+  const {mode,sel,sc}=ps;
+  let pg='';
+  if(!players.length){
+    pg=`<div class="empty"><div class="big">👤</div>Add players in the Roster tab first.</div>`;
+  }else{
+    pg=`<p style="font-size:12px;color:var(--muted);margin-bottom:8px">Select 2–4 players</p><div class="player-grid">`;
+    players.forEach(p=>{
+      pg+=`<div class="player-tile ${sel.includes(p.name)?'sel':''}" onclick="tglP('${esc(p.name)}')">${av(p.name,'av-md')}<span>${esc(p.name)}</span></div>`;
+    });
+    pg+='</div>';
+  }
+  let sg='';
+  if(sel.length>=2){
+    sg=`<p style="font-size:12px;color:var(--muted);margin-bottom:8px">Final scores <span style="color:var(--dim)">(lower is better)</span></p><div class="score-grid">`;
+    sel.forEach(n=>{
+      sg+=`<div class="score-row"><span>${esc(n)}</span><input type="number" min="0" max="260" placeholder="0" value="${sc[n]!==undefined?sc[n]:''}" oninput="updSc('${esc(n)}',this.value)"></div>`;
+    });
+    sg+='</div>';
+  }
+  el.innerHTML=`
+  <div class="seg">
+    <button class="${mode==='individual'?'active':''}" onclick="setMode('individual')">Individual</button>
+    <button class="${mode==='team'?'active':''}" onclick="setMode('team')">Team</button>
+  </div>
+  ${pg}${sg}
+  ${sel.length>=2?`<button class="btn btn-primary" onclick="saveGame()">Save Game ♥</button>`:''}`;
+}
+
+function setMode(m){ps.mode=m;renderPlay()}
+function tglP(n){const i=ps.sel.indexOf(n);if(i>=0)ps.sel.splice(i,1);else if(ps.sel.length<4)ps.sel.push(n);renderPlay()}
+function updSc(n,v){ps.sc[n]=parseInt(v)||0}
+
+async function saveGame(){
+  const {mode,sel,sc}=ps;if(sel.length<2)return;
+  const sorted=[...sel].sort((a,b)=>(sc[a]||0)-(sc[b]||0));
+  const g={id:Date.now(),date:new Date().toISOString(),mode,players:sel,scores:{...sc},winner:sorted[0]};
+  await load();
+  state.games=[g,...(state.games||[])];
+  if(await save()){ps={mode:'individual',sel:[],sc:{}};toast('Game saved ♥');renderPlay()}
+}
+
+// ── RECORDS ──────────────────────────────────────────────────────────────────
+function renderRecords(){
+  const el=document.getElementById('main');
+  const players=state.players||[], games=state.games||[];
+  const stats={};
+  players.forEach(p=>{stats[p.name]={w:0,l:0,tot:0,gp:0}});
+  games.forEach(g=>{
+    (g.players||[]).forEach(n=>{
+      if(!stats[n])stats[n]={w:0,l:0,tot:0,gp:0};
+      stats[n].gp++;stats[n].tot+=(g.scores&&g.scores[n])||0;
+      if(g.winner===n)stats[n].w++;else stats[n].l++;
+    });
+  });
+  const rows=Object.entries(stats).sort((a,b)=>b[1].w-a[1].w||a[1].l-b[1].l);
+  const top=rows[0]?rows[0][0]:'—';
+  el.innerHTML=`
+  <div class="stats">
+    <div class="stat"><div class="sl">Games</div><div class="sv">${games.length}</div></div>
+    <div class="stat"><div class="sl">Players</div><div class="sv">${players.length}</div></div>
+    <div class="stat"><div class="sl">Leading</div><div class="sv" style="font-size:13px;padding-top:2px">${esc(top)}</div></div>
+  </div>
+  ${!rows.length?`<div class="empty"><div class="big">📊</div>No data yet — play your first game!</div>`:`
+  <div class="lb-wrap">
+    <div class="lb-head"><span>Player</span><span class="tc">W</span><span class="tc">L</span><span class="tc">GP</span><span class="tr">Avg</span></div>
+    ${rows.map(([n,s],i)=>`<div class="lb-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="color:${i===0?'var(--accent2)':'var(--dim)'};font-size:11px;width:14px">${i===0?'♥':i+1}</span>
+        ${av(n,'av-md')}<span style="font-size:13px;font-weight:500">${esc(n)}</span>
+      </div>
+      <span class="tc wins">${s.w}</span>
+      <span class="tc" style="color:var(--muted)">${s.l}</span>
+      <span class="tc" style="color:var(--muted)">${s.gp}</span>
+      <span class="tr" style="color:var(--muted)">${s.gp?Math.round(s.tot/s.gp):'—'}</span>
+    </div>`).join('')}
+  </div>`}`;
+}
+
+// ── HISTORY ──────────────────────────────────────────────────────────────────
+function renderHistory(){
+  const el=document.getElementById('main');
+  const games=state.games||[];
+  if(!games.length){el.innerHTML=`<div class="empty"><div class="big">🃏</div>No games yet — play one!</div>`;return}
+  el.innerHTML=games.map(g=>{
+    const ds=new Date(g.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    const sorted=[...(g.players||[])].sort((a,b)=>(g.scores&&g.scores[a]||0)-(g.scores&&g.scores[b]||0));
+    return`<div class="game-card">
+      <div class="gm"><span class="gd">${ds}</span><span class="gb">${esc(g.mode||'individual')}</span></div>
+      ${sorted.map((n,i)=>`<div class="gp">
+        <span class="gr ${i===0?'first':''}">${i===0?'♥':i+1}</span>
+        ${av(n,'av-sm')}
+        <span style="flex:1;font-size:13px;font-weight:${i===0?600:400};color:${i===0?'var(--text)':'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n)}</span>
+        <span style="font-size:13px;font-weight:${i===0?600:400};color:var(--text)">${(g.scores&&g.scores[n])||0}</span>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ── ROSTER ───────────────────────────────────────────────────────────────────
+function renderRoster(){
+  const el=document.getElementById('main');
+  const players=state.players||[];
+  el.innerHTML=`
+  <div class="add-row">
+    <input type="text" id="nn" placeholder="Player name…" maxlength="30" onkeydown="if(event.key==='Enter')addP()">
+    <button class="btn btn-ghost" onclick="addP()">Add</button>
+  </div>
+  ${!players.length?`<div class="empty"><div class="big">👤</div>No players yet. Add one above!</div>`
+    :players.map(p=>`<div class="roster-item">${av(p.name,'av-lg')}<span style="flex:1;font-size:14px;font-weight:500">${esc(p.name)}</span><button class="btn-icon" onclick="rmP('${esc(p.name)}')" aria-label="Remove">×</button></div>`).join('')}
+  <p style="font-size:11px;color:var(--dim);text-align:center;margin-top:16px">Changes sync to all devices automatically.</p>`;
+  setTimeout(()=>{const i=document.getElementById('nn');if(i)i.focus()},50);
+}
+
+async function addP(){
+  const inp=document.getElementById('nn');if(!inp)return;
+  const name=inp.value.trim();if(!name)return;
+  if((state.players||[]).find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Already on the roster');return}
+  await load();
+  state.players=[...(state.players||[]),{name}];
+  if(await save()){toast(name+' added');renderRoster()}
+}
+async function rmP(name){
+  if(!confirm('Remove '+name+' from the roster?'))return;
+  await load();
+  state.players=(state.players||[]).filter(p=>p.name!==name);
+  if(await save()){toast(name+' removed');renderRoster()}
+}
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+(async function boot(){
+  renderShell();
+  document.getElementById('main').innerHTML=`<div class="loader"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span></div>`;
+  const ok=await load();
+  if(!ok){
+    document.getElementById('main').innerHTML=`<div class="empty"><div class="big">⚠️</div>Could not connect to the shared database.<br><br>Check your internet connection and try refreshing.</div>`;
+    return;
+  }
+  startRefresh();
+  renderTab('play');
+})();
+</script>
+</body>
+</html>
